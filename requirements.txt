@@ -1,0 +1,11 @@
+
+# Dependencies for Punctuators
+# Based on setup.py and local testing adjustments
+
+onnxruntime
+torch>=1.9
+# Critical: sentencepiece must be 0.1.99 on Windows to avoid binary incompatibility crash
+sentencepiece==0.1.99
+huggingface-hub
+omegaconf
+numpy
