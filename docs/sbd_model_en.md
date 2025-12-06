@@ -25,8 +25,38 @@ The model uses a data-driven approach built on a highly optimized **BERT-style e
         *   Embeddings: ~8.2M (Large vocab)
         *   Compute Parameters: ~0.8M (Very lightweight compute)
 
+
 3.  **Classification Head**
     *   A linear layer predicts the probability of a token being the End-Of-Sentence (EOS).
+
+### 2.2 Mermaid Diagram
+
+```mermaid
+graph TD
+    subgraph Preprocessing
+        RawText[Raw Input Text] --> Tokenizer[SentencePiece Tokenizer]
+        Tokenizer --> TokenIDs[Token IDs]
+    end
+
+    subgraph "SBD Model (Encoder & Head)"
+        TokenIDs --> Embed[Embeddings]
+        Embed --> Encoder[BERT-style Encoder<br/>(4 Layers, 8 Heads, 128 Dim)]
+
+        Encoder --> ContextVec[Context Vectors]
+
+        ContextVec --> Classifier[Linear SBD Head]
+        Classifier --> Sigmoid{Sigmoid}
+        Sigmoid --> Probs[EOS Probabilities]
+    end
+
+    subgraph Postprocessing
+        Probs --> Threshold{Threshold > 0.5}
+        Threshold -- Yes --> Break[Split Sentence]
+        Threshold -- No --> Continue[Continue]
+        Break --> Output[Segmented Sentences]
+    end
+```
+
 
 ## 3. Training Details
 *   **Framework**: NVIDIA NeMo (Custom fork)

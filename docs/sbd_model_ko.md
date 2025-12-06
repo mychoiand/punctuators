@@ -20,20 +20,6 @@
     *   **Base**: BERT-style Transformer Encoder
     *   **Layers**: 4
     *   **Attention Heads**: 8
-    *   **Hidden Dimension**: 128
-    *   **Intermediate (Feed-Forward) Dimension**: 512
-    *   **총 파라미터**: 약 900만 개 (9M)
-        *   임베딩(Embeddings): 약 820만 개 (대부분을 차지함)
-        *   연산 파라미터: 약 80만 개 (실제 연산량은 매우 적음)
-
-3.  **Classification Head (분류기)**
-    *   각 Subword 토큰에 대해 "이 토큰이 문장의 마지막인가?"를 예측하는 선형 분류기(Linear Classifier)가 부착되어 있습니다.
-
-## 3. 학습 상세 (Training Details)
-*   **프레임워크**: NVIDIA NeMo (Custom fork branch `sbd`)
-*   **학습 데이터**:
-    *   각 언어별 약 100만 줄(Line)의 텍스트 사용 (총 4,900만 줄).
-    *   랜덤하게 언어를 샘플링하여 다국어 배치를 구성.
     *   **Batch Size**: 256
 *   **학습 과정**: 수십만 Step 동안 학습됨.
 
