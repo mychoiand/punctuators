@@ -24,6 +24,7 @@ While utilizing the same logical prediction graph as the lightweight model, this
 ### 2.3 Advanced True-casing
 *   Modeled as a **Multi-label problem**.
 *   The model makes `N` predictions per subword, where `N` is the number of characters in that subword.
+*   **Benefit**: This allows arbitrary capitalization patterns like "NATO" (all caps), "MacDonald" (internal caps), or "mRNA" (first letter lowercase). This is more advanced than the simple "Capitalize First Letter" approach.
 
 ### 2.4 Mermaid Diagram
 
@@ -35,39 +36,39 @@ graph TD
     end
 
     subgraph "Stage 1: Backbone Encoding"
-        IDs --> Encoder[XLM-Roberta Backbone<br/>(Massive Pre-trained Model)]
+        IDs --> Encoder["XLM-Roberta Backbone<br/>(Massive Pre-trained Model)"]
         Encoder --> ContextVectors[Context Vectors]
     end
 
     subgraph "Stage 2: Post-Punctuation"
         ContextVectors --> HeadPost[Post-Punct Head]
-        HeadPost --> PredPost[Predicted Post-Punctuation]
+        HeadPost --> PredPost["Predicted Post-Punctuation"]
     end
 
     subgraph "Stage 3: Re-encoding"
-        PredPost --> PunctEmbed[Punctuation Embedding]
+        PredPost --> PunctEmbed["Punctuation Embedding"]
         ContextVectors --> Concat((Concatenation))
         PunctEmbed --> Concat
         Concat --> ReEncoder[Re-Encoder Layer]
-        ReEncoder --> ReContext[Refined Context Vectors]
+        ReEncoder --> ReContext["Refined Context Vectors"]
     end
 
     subgraph "Stage 4: Parallel Predictions"
         ReContext --> HeadPre[Pre-Punct Head]
-        HeadPre --> PredPre[Predicted Pre-Punctuation]
+        HeadPre --> PredPre["Predicted Pre-Punctuation"]
 
         ReContext --> HeadSBD[SBD Head]
-        HeadSBD --> PredSBD[Sentence Boundaries]
+        HeadSBD --> PredSBD["Sentence Boundaries"]
     end
 
     subgraph "Stage 5: Multi-label True-casing"
-        PredSBD --> Shift[Shift Right]
-        Shift --> NewSent[New Sentence Flags]
+        PredSBD --> Shift["Shift Right"]
+        Shift --> NewSent["New Sentence Flags"]
 
         ReContext --> Concat2((Concat))
         NewSent --> Concat2
-        Concat2 --> HeadCap[True-case Head<br/>(Multi-label)]
-        HeadCap --> PredCap[Capitalization Labels<br/>(Per Character)]
+        Concat2 --> HeadCap["True-case Head<br/>(Multi-label)"]
+        HeadCap --> PredCap["Capitalization Labels<br/>(Per Character)"]
     end
 
     subgraph Output
@@ -79,7 +80,6 @@ graph TD
         Reconstruction[Result Collector] --> FinalText[Restored Text]
     end
 ```
-
 
 ## 3. Training Details
 *   **Hardware**: Trained on NVIDIA A100 (~7 hours).

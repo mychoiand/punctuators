@@ -18,6 +18,74 @@
 2.  **Encoding**: XLM-Roberta로 문맥 벡터 생성.
 3.  **Graph Logic**:
     *   **Punctuation**: 토큰 전후의 구두점을 예측합니다.
+    *   **Embedding & Conditioning**: 예측된 구두점을 임베딩하여 SBD 헤드에 전달합니다. "마침표가 찍혔다는 사실"이 문장 분리의 강력한 힌트가 됩니다.
+    *   **Shift for True-casing**: 문장 분리 정보를 한 칸 밀어(Shift), 다음 문장 첫 단어의 대문자화를 유도합니다.
+
+### 2.3 대소문자 복원 (True-casing) 특징
+*   이 모델은 대소문자 복원을 **Multi-label Problem**으로 접근합니다.
+*   각 서브워드 토큰 내의 글자 수(N)만큼 예측을 수행합니다.
+*   즉, 단순히 "첫 글자만 대문자로" 하는 것이 아니라, "NATO", "MacDonald", "mRNA" 같이 단어 중간의 대문자나 전체 대문자도 처리할 수 있는 구조입니다.
+
+### 2.4 Mermaid 다이어그램 (Architecture Diagram)
+
+```mermaid
+graph TD
+    subgraph Input
+        RawText[Raw Input Text] --> Tokenizer[XLM-R Tokenizer]
+        Tokenizer --> IDs[Token IDs]
+    end
+
+    subgraph "Stage 1: Backbone Encoding"
+        IDs --> Encoder["XLM-Roberta Backbone<br/>(Massive Pre-trained Model)"]
+        Encoder --> ContextVectors[Context Vectors]
+    end
+
+    subgraph "Stage 2: Post-Punctuation"
+        ContextVectors --> HeadPost[Post-Punct Head]
+        HeadPost --> PredPost["Predicted Post-Punctuation"]
+    end
+
+    subgraph "Stage 3: Re-encoding"
+        PredPost --> PunctEmbed["Punctuation Embedding"]
+        ContextVectors --> Concat((Concatenation))
+        PunctEmbed --> Concat
+        Concat --> ReEncoder[Re-Encoder Layer]
+        ReEncoder --> ReContext["Refined Context Vectors"]
+    end
+
+    subgraph "Stage 4: Parallel Predictions"
+        ReContext --> HeadPre[Pre-Punct Head]
+        HeadPre --> PredPre["Predicted Pre-Punctuation"]
+
+        ReContext --> HeadSBD[SBD Head]
+        HeadSBD --> PredSBD["Sentence Boundaries"]
+    end
+
+    subgraph "Stage 5: Multi-label True-casing"
+        PredSBD --> Shift["Shift Right"]
+        Shift --> NewSent["New Sentence Flags"]
+
+        ReContext --> Concat2((Concat))
+        NewSent --> Concat2
+        Concat2 --> HeadCap["True-case Head<br/>(Multi-label)"]
+        HeadCap --> PredCap["Capitalization Labels<br/>(Per Character)"]
+    end
+
+    subgraph Output
+        IDs --> Reconstruction
+        PredPost --> Reconstruction
+        PredPre --> Reconstruction
+        PredSBD --> Reconstruction
+        PredCap --> Reconstruction
+        Reconstruction[Result Collector] --> FinalText[Restored Text]
+    end
+```
+
+## 3. 학습 상세 (Training Details)
+*   **하드웨어**: NVIDIA A100 GPU (약 7시간 학습)
+*   **데이터**: WMT News Crawl (각 언어 100만 줄).
+*   **샘플링 이슈**: 스페인어의 뒤집힌 물음표(`¿`)와 같은 희귀 토큰을 학습시키기 위해 해당 문장들을 Over-sampling(과잉 추출)했습니다.
+
 ## 4. 제약 사항 및 알려진 문제 (Limitations)
 1.  **스페인어 물음표 과잉 예측**:
     *   희귀 토큰(`¿`) 학습을 위해 데이터를 늘린 부작용으로, 스페인어에서 물음표를 너무 자주 예측하는 경향이 있습니다. ("Over-corrected")

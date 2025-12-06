@@ -36,6 +36,7 @@
 
 5.  **True-casing (대소문자 복원)**:
     *   SBD 예측 결과(문장 경계)를 오른쪽으로 한 칸 이동(Shift)시켜, "문장의 첫 단어" 정보를 True-casing 헤드에 전달합니다.
+    *   이를 통해 문장의 첫 글자를 정확하게 대문자로 변환할 수 있습니다.
 
 ### 2.3 Mermaid 다이어그램 (Pipeline Diagram)
 
@@ -47,38 +48,38 @@ graph TD
     end
 
     subgraph "Stage 1: Base Encoding"
-        IDs --> Encoder[Custom Transformer Encoder<br/>(6 Layers, 512 Dim)]
+        IDs --> Encoder["Custom Transformer Encoder<br/>(6 Layers, 512 Dim)"]
         Encoder --> ContextVectors[Context Vectors]
     end
 
     subgraph "Stage 2: Post-Punctuation"
         ContextVectors --> HeadPost[Post-Punct Head]
-        HeadPost --> PredPost[Predicted Post-Punctuation<br/>(., ?, ! etc.)]
+        HeadPost --> PredPost["Predicted Post-Punctuation<br/>(., ?, ! etc.)"]
     end
 
     subgraph "Stage 3: Re-encoding"
-        PredPost --> PunctEmbed[Punctuation Embedding<br/>(4 Dim)]
+        PredPost --> PunctEmbed["Punctuation Embedding<br/>(4 Dim)"]
         ContextVectors --> Concat((Concatenation))
         PunctEmbed --> Concat
         Concat --> ReEncoder[Re-Encoder Layer]
-        ReEncoder --> ReContext[Refined Context Vectors]
+        ReEncoder --> ReContext["Refined Context Vectors"]
     end
 
     subgraph "Stage 4: Parallel Predictions"
         ReContext --> HeadPre[Pre-Punct Head]
-        HeadPre --> PredPre[Predicted Pre-Punctuation]
+        HeadPre --> PredPre["Predicted Pre-Punctuation"]
 
         ReContext --> HeadSBD[SBD Head]
-        HeadSBD --> PredSBD[Sentence Boundaries]
+        HeadSBD --> PredSBD["Sentence Boundaries"]
     end
 
     subgraph "Stage 5: True-casing"
-        PredSBD --> Shift[Shift Right]
-        Shift --> NewSent[New Sentence Flags]
+        PredSBD --> Shift["Shift Right"]
+        Shift --> NewSent["New Sentence Flags"]
         ReContext --> Concat2((Concat))
         NewSent --> Concat2
-        Concat2 --> HeadCap[True-case Head]
-        HeadCap --> PredCap[Capitalization Labels]
+        Concat2 --> HeadCap["True-case Head"]
+        HeadCap --> PredCap["Capitalization Labels"]
     end
 
     subgraph Output
@@ -90,7 +91,6 @@ graph TD
         Reconstruction[Result Collector] --> FinalText[Restored Text]
     end
 ```
-
 
 ## 3. 학습 및 데이터 (Training Details)
 *   **데이터 출처**: WMT News Crawl (뉴스 데이터).
