@@ -1,6 +1,0 @@
-onnxruntime
-torch>=1.9
-sentencepiece
-huggingface-hub
-omegaconf
-numpy
