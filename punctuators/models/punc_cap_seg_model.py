@@ -86,21 +86,64 @@ class PunctCapSegModelONNX(PunctCapSegModel):
     @classmethod
     def from_pretrained(cls, pretrained_name: str, ort_providers: Optional[Any]=None) -> "PunctCapSegModelONNX":
         """
-
-        Args:
-            pretrained_name: 
+        Load a pretrained model.
+        Priority:
+        1. Local directory with the exact name (e.g. "./my_model")
+        2. Local directory in ./weights/ (e.g. "./weights/punct_cap_seg_47_language")
+        3. Hugging Face Hub (default presets)
         """
         cfg: PunctCapSegConfigONNX
-        if "/" in pretrained_name:
+
+        # 0. Check if input is a direct HF repo link (contains '/')
+        if "/" in pretrained_name and not os.path.isdir(pretrained_name) and not os.path.isdir(os.path.join("weights", pretrained_name)):
             # Assume this is a HuggingFace repository with default model names
             cfg = PunctCapSegConfigONNX(hf_repo_id=pretrained_name)
-        else:
-            available_models: Dict[str, PunctCapSegConfigONNX] = cls.pretrained_model_info()
-            if pretrained_name not in available_models:
-                raise ValueError(
-                    f"Pretrained name '{pretrained_name}' not in available models: '{list(available_models.keys())}'"
-                )
-            cfg = available_models[pretrained_name]
+            return cls(cfg=cfg, ort_providers=ort_providers)
+
+        available_models: Dict[str, PunctCapSegConfigONNX] = cls.pretrained_model_info()
+
+        # 1. Check if input is a direct path to a directory
+        if os.path.isdir(pretrained_name):
+            print(f"Loading PCS model from local path: {pretrained_name}")
+            cfg = PunctCapSegConfigONNX(
+                hf_repo_id=None,
+                directory=pretrained_name,
+                spe_filename="sp.model",
+                model_filename="model.onnx",
+                config_filename="config.yaml"
+            )
+            if pretrained_name in available_models:
+                 preset_cfg = available_models[pretrained_name]
+                 cfg.spe_filename = preset_cfg.spe_filename
+                 cfg.model_filename = preset_cfg.model_filename
+                 cfg.config_filename = preset_cfg.config_filename
+            return cls(cfg=cfg, ort_providers=ort_providers)
+
+        # 2. Check ./weights/{pretrained_name}
+        local_weights_path = os.path.join("weights", pretrained_name)
+        if os.path.isdir(local_weights_path):
+            print(f"Loading PCS model from local weights: {local_weights_path}")
+            if pretrained_name in available_models:
+                cfg = available_models[pretrained_name]
+                cfg.hf_repo_id = None
+                cfg.directory = local_weights_path
+                return cls(cfg=cfg, ort_providers=ort_providers)
+            else:
+                 cfg = PunctCapSegConfigONNX(
+                    hf_repo_id=None,
+                    directory=local_weights_path,
+                     spe_filename="sp.model",
+                    model_filename="model.onnx",
+                    config_filename="config.yaml"
+                 )
+                 return cls(cfg=cfg, ort_providers=ort_providers)
+
+        if pretrained_name not in available_models:
+             raise ValueError(
+                f"Pretrained name '{pretrained_name}' not in available models: '{list(available_models.keys())}' "
+                f"and not found as a local directory."
+            )
+        cfg = available_models[pretrained_name]
         return cls(cfg=cfg, ort_providers=ort_providers)
 
     @property

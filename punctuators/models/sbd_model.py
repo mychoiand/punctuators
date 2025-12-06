@@ -69,10 +69,67 @@ class SBDModelONNX(SBDModel):
 
     @classmethod
     def from_pretrained(cls, pretrained_name: str) -> "SBDModelONNX":
+        """
+        Load a pretrained model.
+        Priority:
+        1. Local directory with the exact name (e.g. "./my_model")
+        2. Local directory in ./weights/ (e.g. "./weights/sbd_multi_lang")
+        3. Hugging Face Hub (default presets)
+        """
         available_models: Dict[str, SBDConfigONNX] = cls.pretrained_model_info()
+
+        # 1. Check if input is a direct path to a directory
+        if os.path.isdir(pretrained_name):
+            print(f"Loading SBD model from local path: {pretrained_name}")
+            # Load config from the directory if possible, or attempt to use the filename from a matching preset if the name matches
+            # Ideally, if loading from local path, we need to know the filenames.
+            # If the user provides a path, we assume standard filenames or we look for a config.yaml?
+            # For simplicity, if it matches a preset key, we reuse that config but set directory.
+            # If it's a completely custom path, we might need more logic.
+            # Here we assume the user is using the standard preset names as folder names.
+
+            # Simple approach: If it's a directory, assume standard filenames
+            cfg = SBDConfigONNX(
+                hf_repo_id=None,
+                directory=pretrained_name,
+                spe_filename="sp.model",
+                model_filename="model.onnx",
+                config_filename="config.yaml"
+            )
+            # Try to infer correct filenames if the folder name matches a preset
+            if pretrained_name in available_models:
+                 preset_cfg = available_models[pretrained_name]
+                 cfg.spe_filename = preset_cfg.spe_filename
+                 cfg.model_filename = preset_cfg.model_filename
+                 cfg.config_filename = preset_cfg.config_filename
+
+            return cls(cfg=cfg)
+
+        # 2. Check ./weights/{pretrained_name}
+        local_weights_path = os.path.join("weights", pretrained_name)
+        if os.path.isdir(local_weights_path):
+            print(f"Loading SBD model from local weights: {local_weights_path}")
+            if pretrained_name in available_models:
+                cfg = available_models[pretrained_name]
+                cfg.hf_repo_id = None # Disable HF download
+                cfg.directory = local_weights_path
+                return cls(cfg=cfg)
+            else:
+                 # Custom model in weights folder
+                 cfg = SBDConfigONNX(
+                    hf_repo_id=None,
+                    directory=local_weights_path,
+                     spe_filename="sp.model",
+                    model_filename="model.onnx",
+                    config_filename="config.yaml"
+                 )
+                 return cls(cfg=cfg)
+
+        # 3. Fallback to Hugging Face
         if pretrained_name not in available_models:
             raise ValueError(
-                f"Pretrained name '{pretrained_name}' not in available models: '{list(available_models.keys())}'"
+                f"Pretrained name '{pretrained_name}' not in available models: '{list(available_models.keys())}' "
+                f"and not found as a local directory."
             )
         return cls(cfg=available_models[pretrained_name])
 
