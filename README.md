@@ -14,6 +14,29 @@ This project can be installed with `pip`:
 $ pip install punctuators
 ```
 
+# Model Management & Local Usage (New Feature)
+
+We have improved the model loading logic to support **offline usage** and **custom weights**.
+
+## 1. Setup Models
+Since the PCS model is large (>200MB), it is **excluded from this Git repository** to avoid LFS issues on public forks. The SBD model (small) is included by default.
+
+To download all necessary models to your local environment, run:
+
+```bash
+python download_models.py
+```
+This will download the models from Hugging Face and save them to the `weights/` directory.
+
+## 2. Model Loading Priority
+The library now follows this priority when loading a model (e.g., `"sbd_multi_lang"`):
+
+1.  **Local Directory (Direct Path)**: If you provide a path like `"./my_model"`.
+2.  **Local Weights Folder**: Checks if `./weights/{model_name}` exists.
+3.  **Hugging Face Hub**: Downloads/Caches from HF (Default behavior if local files are missing).
+
+This allows you to easily switch between local offline models and cloud-hosted models without changing your code.
+
 # Supported Models
 
 This section lists the models currently supported by this package.
